@@ -1,0 +1,3 @@
+[submodule "contrib/Pyrex-core-custom"]
+	path = contrib/Pyrex-core-custom
+	url = https://github.com/pyrex-coin/Pyrex-core-custom.git
