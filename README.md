@@ -27,6 +27,21 @@ A primary goal for this repository is its future convergence and reimplementatio
 * This readme is located at `README.md`, and the license is located at `LICENSE.txt`. All source code copyright © 2014-2018 by MyMonero. All rights reserved.
 
 
+### Dependencies
+
+* (to use included shell scripts) cmake
+
+* Boost 1.58 library components
+
+	* `system`
+
+	* `thread`
+
+	* If running tests: `unit_test_framework`
+
+* `monero-core-custom` (see "Setup")
+
+
 ## Setup
 
 * Run `bin/update_submodules` 
@@ -59,13 +74,20 @@ Contributors credited in releases.
 
 * Branches and PRs should be made from and to the `develop` branch, which gets merged to `master` for tagged releases
 
-## Regular and Main Contributors
+## Authors, Contributors, and Advisors
 
-* 💫 `endogenic` ([Paul Shapiro](https://github.com/paulshapiro)) Lead dev, maintainer
+* 💫 [`Paul Shapiro`](https://github.com/paulshapiro) Lead dev, maintainer
+
+* 🍄 `luigi1111`
 
 * 🤵 `vtnerd` C++ & Monero advisory
 
 * 🐮 `moneromooo-monero` Major Monero contributor; Advisory
+
+* 🦁 `ndorf` C++ & Monero expertise, architecture, code contributions
+
+* 🏍 `gutenye` Code contributions
+
 
 ## Embedding the C++
 
@@ -97,9 +119,9 @@ For examples see `src/serial_bridge_index.cpp` and [mymonero-app-ios/MyMoneroCor
 
 ### JSON
 
-`src/serial_bridge_index` exposes this project's core library functions, each of which takes a string-serialized JSON object as an argument and returns a string-serialized JSON object.
+`src/serial_bridge_index` exposes this project's core library functions. Each bridge function takes a string-serialized JSON object as an argument and returns a string-serialized JSON object.
 
-Usage of each of these functions is demonstrated in `tests/test_all.cpp`.
+Usage of each of these JSON-bridge functions is demonstrated in `tests/test_all.cpp`.
 
 When they fail, some of these functions return only a key-value `err_msg`.
 
@@ -194,13 +216,19 @@ When they fail, some of these functions return only a key-value `err_msg`.
 
 **`generate_key_image`**
 
-* Args: `sec_viewKey_string: String`, `sec_spendKey_string: String`, `pub_spendKey_string: String`, `tx_pub_key: String`, `out_index: UInt64String`
+* Args: `sec_viewKey_string: String`, `sec_spendKey_string: String`, `pub_spendKey_string: String`, `tx_pub_key: String`, `out_index: UInt32String`
 
 * Returns: `err_msg: String` *OR* `retVal: String`
 	
 **`generate_key_derivation`**
 
 * Args: `pub: String`, `sec: String`
+
+* Returns: `err_msg: String` *OR* `retVal: String`
+	
+**`derivation_to_scalar`**
+
+* Args: `derivation: String`, `output_index: UInt32String`
 
 * Returns: `err_msg: String` *OR* `retVal: String`
 
@@ -216,7 +244,7 @@ When they fail, some of these functions return only a key-value `err_msg`.
 
 * Returns: `err_msg: String` *OR* `retVal: String`
 
-**`decodeRct`**
+**`decodeRct`, `decodeRctSimple`**
 
 * Args: `i: UInt32String`, `sk: String`, `rv: DecodeRCT_RV` where
 
@@ -248,6 +276,18 @@ Useful for displaying an estimated fee – To obtain exact fees, see "Creating a
 * Returns: `retVal: UInt64String`
 
 
+**`estimate_rct_tx_size`**
+
+* Args: 
+	* `n_inputs: UInt32String`
+	* `mixin: UInt32String`
+	* `n_outputs: UInt32String`
+	* `extra_size: UInt32String`
+	* `bulletproof: BoolString`
+
+* Returns: `retVal: UInt32String`
+
+
 #### Creating and Sending Transactions
 
 As mentioned, implementing the Send procedure without making use of one of our existing libraries or examples involves two bridge calls surrounded by server API calls, and mandatory reconstruction logic, and is simplified by various opportunities to pass values directly between the steps.
@@ -277,6 +317,7 @@ The values which must be passed between functions have (almost entirely) consist
 	* `is_sweeping: BoolString`
 	* `priority: UInt32String` of `1`–`4`
 	* `fee_per_b: UInt64String`
+	* `fee_mask: UInt64String`
 	* `unspent_outs: [UnspentOutput]` - fully parsed server response
 	* `payment_id_string: Optional<String>`
 	* `passedIn_attemptAt_fee: Optional<UInt64String>`
@@ -314,6 +355,7 @@ The values which must be passed between functions have (almost entirely) consist
 	* `fee_amount: UInt64String` returned by step1
 	* `priority: UInt32String` of `1`–`4`
 	* `fee_per_b: UInt64String`
+	* `fee_mask: UInt64String`
 	* `using_outs: [UnspentOutput]` returned by step1
 	* `mix_outs: [MixAmountAndOuts]` defined below
 	* `unlock_time: UInt64String`
@@ -344,4 +386,3 @@ The values which must be passed between functions have (almost entirely) consist
 		* `tx_hash: String`
 		* `tx_key: String`
 	
-
