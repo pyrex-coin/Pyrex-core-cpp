@@ -1,7 +1,8 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 project(TEST)
 enable_testing()
@@ -13,7 +14,7 @@ find_package(Boost COMPONENTS
     thread REQUIRED
 )
 
-set(MONERO_SRC "contrib/monero-core-custom")
+set(MONERO_SRC "contrib/Pyrex-core-custom")
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories("src")
@@ -67,7 +68,7 @@ set(
     ${MONERO_SRC}/cryptonote_basic/cryptonote_format_utils.cpp
     ${MONERO_SRC}/crypto/crypto.cpp
     ${MONERO_SRC}/crypto/hash.c
-    ${MONERO_SRC}/crypto/slow-hash.c
+    ${MONERO_SRC}/crypto/slow-hash-dummied.cpp
     ${MONERO_SRC}/crypto/oaes_lib.c
     ${MONERO_SRC}/crypto/crypto-ops.c
     ${MONERO_SRC}/crypto/crypto-ops-data.c
@@ -107,8 +108,7 @@ set(
     ${MONERO_SRC}/contrib/libsodium/src/crypto_verify/verify.c
 )
 # needed for slow-hash
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -maes")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -maes")
+add_compile_options(-maes)
 
 #Run through each source
 foreach(testSrc ${TEST_SRCS})

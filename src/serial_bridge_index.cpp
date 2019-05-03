@@ -311,17 +311,72 @@ string serial_bridge::estimated_tx_network_fee(const string &args_string)
 		// it will already have thrown an exception
 		return error_ret_json_from_message("Invalid JSON");
 	}
+	uint8_t fork_version = 0; // if missing
+	optional<string> optl__fork_version_string = json_root.get_optional<string>("fork_version");
+	if (optl__fork_version_string != none) {
+		fork_version = stoul(*optl__fork_version_string);
+	}
 	uint64_t fee = monero_fee_utils::estimated_tx_network_fee(
 		stoull(json_root.get<string>("fee_per_b")),
 		stoul(json_root.get<string>("priority")),
-		[] (uint8_t version, int64_t early_blocks) -> bool
-		{
-			return lightwallet_hardcoded__use_fork_rules(version, early_blocks);
-		}
+		monero_fork_rules::make_use_fork_rules_fn(fork_version)
 	);
 	std::ostringstream o;
 	o << fee;
 	//
+	boost::property_tree::ptree root;
+	root.put(ret_json_key__generic_retVal(), o.str());
+	//
+	return ret_json_from_root(root);
+}
+string serial_bridge::estimate_fee(const string &args_string)
+{
+	boost::property_tree::ptree json_root;
+	if (!parsed_json_root(args_string, json_root)) {
+		return error_ret_json_from_message("Invalid JSON");
+	}
+	//
+	bool use_per_byte_fee = json_root.get<bool>("use_per_byte_fee");
+	bool use_rct = json_root.get<bool>("use_rct");
+	int n_inputs = stoul(json_root.get<string>("n_inputs"));
+	int mixin = stoul(json_root.get<string>("mixin"));
+	int n_outputs = stoul(json_root.get<string>("n_outputs"));
+	size_t extra_size = stoul(json_root.get<string>("extra_size"));
+	bool bulletproof = json_root.get<bool>("bulletproof");
+	uint64_t base_fee = stoull(json_root.get<string>("base_fee"));
+	uint64_t fee_quantization_mask = stoull(json_root.get<string>("fee_quantization_mask"));
+	uint32_t priority = stoul(json_root.get<string>("priority"));
+	uint8_t fork_version = stoul(json_root.get<string>("fork_version"));
+	use_fork_rules_fn_type use_fork_rules_fn = monero_fork_rules::make_use_fork_rules_fn(fork_version);
+	uint64_t fee_multiplier = monero_fee_utils::get_fee_multiplier(priority, monero_fee_utils::default_priority(), monero_fee_utils::get_fee_algorithm(use_fork_rules_fn), use_fork_rules_fn);
+	//
+	uint64_t fee = monero_fee_utils::estimate_fee(use_per_byte_fee, use_rct, n_inputs, mixin, n_outputs, extra_size, bulletproof, base_fee, fee_multiplier, fee_quantization_mask);
+	//
+	std::ostringstream o;
+	o << fee;
+	boost::property_tree::ptree root;
+	root.put(ret_json_key__generic_retVal(), o.str());
+	//
+	return ret_json_from_root(root);
+}
+string serial_bridge::estimate_tx_weight(const string &args_string)
+{
+	boost::property_tree::ptree json_root;
+	if (!parsed_json_root(args_string, json_root)) {
+		return error_ret_json_from_message("Invalid JSON");
+	}
+	//
+	bool use_rct = json_root.get<bool>("use_rct");
+	int n_inputs = stoul(json_root.get<string>("n_inputs"));
+	int mixin = stoul(json_root.get<string>("mixin"));
+	int n_outputs = stoul(json_root.get<string>("n_outputs"));
+	size_t extra_size = stoul(json_root.get<string>("extra_size"));
+	bool bulletproof = json_root.get<bool>("bulletproof");
+	//
+	uint64_t weight = monero_fee_utils::estimate_tx_weight(use_rct, n_inputs, mixin, n_outputs, extra_size, bulletproof);
+	//
+	std::ostringstream o;
+	o << weight;
 	boost::property_tree::ptree root;
 	root.put(ret_json_key__generic_retVal(), o.str());
 	//
@@ -417,6 +472,11 @@ string serial_bridge::send_step1__prepare_params_for_get_decoys(const string &ar
 	if (optl__passedIn_attemptAt_fee_string != none) {
 		optl__passedIn_attemptAt_fee = stoull(*optl__passedIn_attemptAt_fee_string);
 	}
+	uint8_t fork_version = 0; // if missing
+	optional<string> optl__fork_version_string = json_root.get_optional<string>("fork_version");
+	if (optl__fork_version_string != none) {
+		fork_version = stoul(*optl__fork_version_string);
+	}
 	Send_Step1_RetVals retVals;
 	monero_transfer_utils::send_step1__prepare_params_for_get_decoys(
 		retVals,
@@ -425,10 +485,7 @@ string serial_bridge::send_step1__prepare_params_for_get_decoys(const string &ar
 		stoull(json_root.get<string>("sending_amount")),
 		json_root.get<bool>("is_sweeping"),
 		stoul(json_root.get<string>("priority")),
-		[] (uint8_t version, int64_t early_blocks) -> bool
-		{
-			return lightwallet_hardcoded__use_fork_rules(version, early_blocks);
-		},
+		monero_fork_rules::make_use_fork_rules_fn(fork_version),
 		unspent_outs,
 		stoull(json_root.get<string>("fee_per_b")), // per v8
 		stoull(json_root.get<string>("fee_mask")),
@@ -511,6 +568,11 @@ string serial_bridge::send_step2__try_create_transaction(const string &args_stri
 		}
 		mix_outs.push_back(std::move(amountAndOuts));
 	}
+	uint8_t fork_version = 0; // if missing
+	optional<string> optl__fork_version_string = json_root.get_optional<string>("fork_version");
+	if (optl__fork_version_string != none) {
+		fork_version = stoul(*optl__fork_version_string);
+	}
 	Send_Step2_RetVals retVals;
 	monero_transfer_utils::send_step2__try_create_transaction(
 		retVals,
@@ -528,10 +590,7 @@ string serial_bridge::send_step2__try_create_transaction(const string &args_stri
 		stoull(json_root.get<string>("fee_per_b")),
 		stoull(json_root.get<string>("fee_mask")),
 		mix_outs,
-		[] (uint8_t version, int64_t early_blocks) -> bool
-		{
-		   return lightwallet_hardcoded__use_fork_rules(version, early_blocks);
-		},
+		monero_fork_rules::make_use_fork_rules_fn(fork_version),
 		stoull(json_root.get<string>("unlock_time")),
 		nettype_from_string(json_root.get<string>("nettype_string"))
 	);
@@ -579,6 +638,8 @@ string serial_bridge::decodeRct(const string &args_string)
 		rv.type = rct::RCTTypeFull;
 	} else if (rv_type_int == rct::RCTTypeBulletproof) {
 		rv.type = rct::RCTTypeBulletproof;
+	} else if (rv_type_int == rct::RCTTypeBulletproof2) {
+		rv.type = rct::RCTTypeBulletproof2;
 	} else {
 		return error_ret_json_from_message("Invalid 'rv.type'");
 	}
@@ -650,6 +711,8 @@ string serial_bridge::decodeRctSimple(const string &args_string)
 		rv.type = rct::RCTTypeFull;
 	} else if (rv_type_int == rct::RCTTypeBulletproof) {
 		rv.type = rct::RCTTypeBulletproof;
+	} else if (rv_type_int == rct::RCTTypeBulletproof2) {
+		rv.type = rct::RCTTypeBulletproof2;
 	} else {
 		return error_ret_json_from_message("Invalid 'rv.type'");
 	}
@@ -657,11 +720,17 @@ string serial_bridge::decodeRctSimple(const string &args_string)
 	{
 		assert(ecdh_info_desc.first.empty()); // array elements have no names
 		auto ecdh_info = rct::ecdhTuple{};
-		if (!epee::string_tools::hex_to_pod(ecdh_info_desc.second.get<string>("mask"), ecdh_info.mask)) {
-			return error_ret_json_from_message("Invalid rv.ecdhInfo[].mask");
-		}
-		if (!epee::string_tools::hex_to_pod(ecdh_info_desc.second.get<string>("amount"), ecdh_info.amount)) {
-			return error_ret_json_from_message("Invalid rv.ecdhInfo[].amount");
+		if (rv.type == rct::RCTTypeBulletproof2) {
+			if (!epee::string_tools::hex_to_pod(ecdh_info_desc.second.get<string>("amount"), (crypto::hash8&)ecdh_info.amount)) {
+				return error_ret_json_from_message("Invalid rv.ecdhInfo[].amount");
+			}
+		} else {
+			if (!epee::string_tools::hex_to_pod(ecdh_info_desc.second.get<string>("mask"), ecdh_info.mask)) {
+				return error_ret_json_from_message("Invalid rv.ecdhInfo[].mask");
+			}
+			if (!epee::string_tools::hex_to_pod(ecdh_info_desc.second.get<string>("amount"), ecdh_info.amount)) {
+				return error_ret_json_from_message("Invalid rv.ecdhInfo[].amount");
+			}
 		}
 		rv.ecdhInfo.push_back(ecdh_info);
 	}

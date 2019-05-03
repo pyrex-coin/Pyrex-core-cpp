@@ -104,10 +104,8 @@ BOOST_AUTO_TEST_CASE(wallet)
 #include "../src/monero_fork_rules.hpp"
 BOOST_AUTO_TEST_CASE(transfers__fee)
 {
-	monero_fork_rules::use_fork_rules_fn_type use_fork_rules_fn = [] (uint8_t version, int64_t early_blocks) -> bool
-	{
-		return monero_fork_rules::lightwallet_hardcoded__use_fork_rules(version, early_blocks);
-	};
+	uint8_t fork_version = 10;
+	auto use_fork_rules_fn = monero_fork_rules::make_use_fork_rules_fn(fork_version);
 	uint64_t fee_per_b = 24658;
 	uint32_t priority = 2;
 	uint64_t est_fee = monero_fee_utils::estimated_tx_network_fee(fee_per_b, priority, use_fork_rules_fn);
@@ -177,6 +175,7 @@ BOOST_AUTO_TEST_CASE(bridge__transfers__send__sweepDust)
 			root.put("sending_amount", "0");
 			root.put("fee_per_b", "24658");
 			root.put("fee_mask", "10000");
+			root.put("fork_version", "10");
 			root.put("priority", "1");
 			root.add_child("unspent_outs", unspent_outs);
 			if (fee_actually_needed_string != none) {
@@ -262,6 +261,7 @@ BOOST_AUTO_TEST_CASE(bridge__transfers__send__sweepDust)
 			root.put("sec_spendKey_string", "4e6d43cd03812b803c6f3206689f5fcc910005fc7e91d50d79b0776dbefcd803");
 			root.put("fee_per_b", "24658");
 			root.put("fee_mask", "10000");
+			root.put("fork_version", "10");
 			root.put("unlock_time", "0");
 			root.put("priority", "1");
 			root.add_child("mix_outs", mix_outs);
@@ -327,6 +327,7 @@ BOOST_AUTO_TEST_CASE(bridge__transfers__send__amountWOnlyDusty)
 	root.put("sending_amount", "1000000");
 	root.put("fee_per_b", "24658");
 	root.put("fee_mask", "10000");
+	root.put("fork_version", "10");
 	root.put("priority", "1");
 	root.add_child("unspent_outs", unspent_outs);
 
@@ -336,8 +337,9 @@ BOOST_AUTO_TEST_CASE(bridge__transfers__send__amountWOnlyDusty)
 	boost::property_tree::ptree ret_tree;
 	boost::property_tree::read_json(ret_stream, ret_tree);
 	optional<uint32_t> err_code = ret_tree.get_optional<uint32_t>(ret_json_key__any__err_code());
-	BOOST_REQUIRE_MESSAGE(err_code != none && *err_code == needMoreMoneyThanFound, "Expected needMoreMoneyThanFound");
-	// ^--- expecting needMoreMoneyThanFound
+	BOOST_REQUIRE_MESSAGE(err_code == none, "Expected no error");
+	BOOST_REQUIRE_MESSAGE(ret_tree.get<string>("using_fee") == string("66290000"), "Expected using_fee of 66290000");
+	BOOST_REQUIRE_MESSAGE(ret_tree.get<string>("final_total_wo_fee") == string("1000000"), "Expected final_total_wo_fee of 1000000");
 }
 string DG_postsweep__unspent_outs_json = "{\"unspent_outs\":[{\"amount\":\"3000000000\",\"public_key\":\"41be1978f58cabf69a9bed5b6cb3c8d588621ef9b67602328da42a213ee42271\",\"index\":1,\"global_index\":7611174,\"rct\":\"86a2c9f1f8e66848cd99bfda7a14d4ac6c3525d06947e21e4e55fe42a368507eb5b234ccdd70beca8b1fc8de4f2ceb1374e0f1fd8810849e7f11316c2cc063060008ffa5ac9827b776993468df21af8c963d12148622354f950cbe1369a92a0c\",\"tx_id\":5334971,\"tx_hash\":\"9d37c7fdeab91abfd1e7e120f5c49eac17b7ac04a97a0c93b51c172115df21ea\",\"tx_pub_key\":\"bd703d7f37995cc7071fb4d2929594b5e2a4c27d2b7c68a9064500ca7bc638b8\"}]}";
 string DG_postsweep__rand_outs_json = "{\"mix_outs\":[{\"amount\":\"0\",\"outputs\":[{\"global_index\":\"7453099\",\"public_key\":\"31f3a7fec0f6f09067e826b6c2904fd4b1684d7893dcf08c5b5d22e317e148bb\",\"rct\":\"ea6bcb193a25ce2787dd6abaaeef1ee0c924b323c6a5873db1406261e86145fc\"},{\"global_index\":\"7500097\",\"public_key\":\"f9d923500671da05a1bf44b932b872f0c4a3c88e6b3d4bf774c8be915e25f42b\",\"rct\":\"dcae4267a6c382bcd71fd1af4d2cbceb3749d576d7a3acc473dd579ea9231a52\"},{\"global_index\":\"7548483\",\"public_key\":\"839cbbb73685654b93e824c4843e745e8d5f7742e83494932307bf300641c480\",\"rct\":\"aa99d492f1d6f1b20dcd95b8fff8f67a219043d0d94b4551759016b4888573e7\"},{\"global_index\":\"7554755\",\"public_key\":\"b8860f0697988c8cefd7b4285fbb8bec463f136c2b9a9cadb3e57cebee10717f\",\"rct\":\"327f9b07bee9c4c25b5a990123cd2444228e5704ebe32016cd632866710279b5\"},{\"global_index\":\"7561477\",\"public_key\":\"561d734cb90bc4a64d49d37f85ea85575243e2ed749a3d6dcb4d27aa6bec6e88\",\"rct\":\"b5393e038df95b94bfda62b44a29141cac9e356127270af97193460d51949841\"},{\"global_index\":\"7567062\",\"public_key\":\"db1024ef67e7e73608ef8afab62f49e2402c8da3dc3197008e3ba720ad3c94a8\",\"rct\":\"1fedf95621881b77f823a70aa83ece26aef62974976d2b8cd87ed4862a4ec92c\"},{\"global_index\":\"7567508\",\"public_key\":\"6283f3cd2f050bba90276443fe04f6076ad2ad46a515bf07b84d424a3ba43d27\",\"rct\":\"10e16bb8a8b7b0c8a4b193467b010976b962809c9f3e6c047335dba09daa351f\"},{\"global_index\":\"7568716\",\"public_key\":\"7a7deb4eef81c1f5ce9cbd0552891cb19f1014a03a5863d549630824c7c7c0d3\",\"rct\":\"735d059dc3526334ac705ddc44c4316bb8805d2426dcea9544cde50cf6c7a850\"},{\"global_index\":\"7571196\",\"public_key\":\"535208e354cae530ed7ce752935e555d630cf2edd7f91525024ed9c332b2a347\",\"rct\":\"c3cf838faa14e993536c5581ca582fb0d96b70f713cf88f7f15c89336e5853ec\"},{\"global_index\":\"7571333\",\"public_key\":\"e73f27b7eb001aa7eac13df82814cda65b42ceeb6ef36227c25d5cbf82f6a5e4\",\"rct\":\"5f45f33c6800cdae202b37abe6d87b53d6873e7b30f3527161f44fa8db3104b6\"},{\"global_index\":\"7571335\",\"public_key\":\"fce982dbz8e7a6b71a1e632c7de8c5cbf54e8bacdfbf250f1ffc2a8d2f7055ce3\",\"rct\":\"407bdcc48e70eb3ef2cc22cefee6c6b5a3c59fd17bde12fda5f1a44a0fb39d14\"}]}]}";
@@ -384,6 +386,7 @@ BOOST_AUTO_TEST_CASE(bridge__transfers__send__amount)
 			root.put("sending_amount", "200000000");
 			root.put("fee_per_b", "24658");
 			root.put("fee_mask", "10000");
+			root.put("fork_version", "10");
 			root.put("priority", "1");
 			root.add_child("unspent_outs", unspent_outs);
 			if (fee_actually_needed_string != none) {
@@ -470,6 +473,7 @@ BOOST_AUTO_TEST_CASE(bridge__transfers__send__amount)
 			root.put("sec_spendKey_string", "4e6d43cd03812b803c6f3206689f5fcc910005fc7e91d50d79b0776dbefcd803");
 			root.put("fee_per_b", "24658");
 			root.put("fee_mask", "10000");
+			root.put("fork_version", "10");
 			root.put("unlock_time", "0");
 			root.put("priority", "1");
 			root.add_child("mix_outs", mix_outs);
@@ -875,6 +879,7 @@ BOOST_AUTO_TEST_CASE(bridged__estimated_tx_network_fee)
 	boost::property_tree::ptree root;
 	root.put("fee_per_b", "24658");
 	root.put("fee_mask", "10000");
+	root.put("fork_version", "10");
 	root.put("priority", "2");
 	//
 	auto ret_string = serial_bridge::estimated_tx_network_fee(args_string_from_root(root));
@@ -892,6 +897,67 @@ BOOST_AUTO_TEST_CASE(bridged__estimated_tx_network_fee)
 	uint64_t fee = stoull(*fee_string);
 	BOOST_REQUIRE(fee == 330047330);
 	cout << "bridged__estimated_tx_network_fee: " << fee << endl;
+}
+BOOST_AUTO_TEST_CASE(bridged__estimate_fee)
+{
+	using namespace serial_bridge;
+	//
+	boost::property_tree::ptree root;
+	root.put("use_per_byte_fee", "true");
+	root.put("use_rct", "true");
+	root.put("n_inputs", "2");
+	root.put("mixin", "10");
+	root.put("n_outputs", "2");
+	root.put("extra_size", "0");
+	root.put("bulletproof", "true");
+	root.put("base_fee", "24658");
+	root.put("fee_quantization_mask", "10000");
+	root.put("priority", "2");
+	root.put("fork_version", "10");
+	//
+	auto ret_string = serial_bridge::estimate_fee(args_string_from_root(root));
+	stringstream ret_stream;
+	ret_stream << ret_string;
+	boost::property_tree::ptree ret_tree;
+	boost::property_tree::read_json(ret_stream, ret_tree);
+	optional<string> err_string = ret_tree.get_optional<string>(ret_json_key__any__err_msg());
+	if (err_string != none) {
+		BOOST_REQUIRE_MESSAGE(false, *err_string);
+	}
+	optional<string> fee_string = ret_tree.get_optional<string>(ret_json_key__generic_retVal());
+	BOOST_REQUIRE(fee_string != none);
+	BOOST_REQUIRE((*fee_string).size() > 0);
+	uint64_t fee = stoull(*fee_string);
+	BOOST_REQUIRE(fee == 330050000);
+	cout << "bridged__estimate_fee: " << fee << endl;
+}
+BOOST_AUTO_TEST_CASE(bridged__estimate_tx_weight)
+{
+	using namespace serial_bridge;
+	//
+	boost::property_tree::ptree root;
+	root.put("use_rct", "true");
+	root.put("n_inputs", "2");
+	root.put("mixin", "10");
+	root.put("n_outputs", "2");
+	root.put("extra_size", "0");
+	root.put("bulletproof", "true");
+	//
+	auto ret_string = serial_bridge::estimate_tx_weight(args_string_from_root(root));
+	stringstream ret_stream;
+	ret_stream << ret_string;
+	boost::property_tree::ptree ret_tree;
+	boost::property_tree::read_json(ret_stream, ret_tree);
+	optional<string> err_string = ret_tree.get_optional<string>(ret_json_key__any__err_msg());
+	if (err_string != none) {
+		BOOST_REQUIRE_MESSAGE(false, *err_string);
+	}
+	optional<string> weight_string = ret_tree.get_optional<string>(ret_json_key__generic_retVal());
+	BOOST_REQUIRE(weight_string != none);
+	BOOST_REQUIRE((*weight_string).size() > 0);
+	uint64_t weight = stoull(*weight_string);
+	BOOST_REQUIRE(weight == 2677);
+	cout << "bridged__estimate_tx_weight: " << weight << endl;
 }
 BOOST_AUTO_TEST_CASE(bridged__estimate_rct_tx_size)
 {
@@ -1275,6 +1341,65 @@ BOOST_AUTO_TEST_CASE(bridged__decodeRctSimple)
 	cout << "bridged__decodeRctSimple: amount_string: " << amount_string << endl;
 	BOOST_REQUIRE(amount_string == "10000000000");
 }
+// with bulletproof2
+BOOST_AUTO_TEST_CASE(bridged__decodeRctSimple_with_bulletproof2)
+{
+	using namespace serial_bridge;
+	//
+	boost::property_tree::ptree root;
+	root.put("i", "1");
+	root.put("sk", "6d610888e25f36701f394ffdd90a65b0dabcf9af5e08dc1508f261d1518ef302");
+	
+	boost::property_tree::ptree rv;
+	{
+		rv.put("type", "4");
+		//
+		boost::property_tree::ptree ecdhInfo;
+		{
+			boost::property_tree::ptree ecdh_info;
+			ecdh_info.put("amount", "4ecd30261cf20abd");
+			ecdhInfo.push_back(std::make_pair("", ecdh_info));
+		}
+		{
+			boost::property_tree::ptree ecdh_info;
+			ecdh_info.put("amount", "f024c943ea864831");
+			ecdhInfo.push_back(std::make_pair("", ecdh_info));
+		}
+		rv.add_child("ecdhInfo", ecdhInfo);
+		//
+		boost::property_tree::ptree outPk;
+		{
+			boost::property_tree::ptree an_outPk;
+			an_outPk.put("mask", "f665a172ea10f19da0d5af66554951ea94d36ee2570e34e1ce4f65aa55c5f53b");
+			outPk.push_back(std::make_pair("", an_outPk));
+		}
+		{
+			boost::property_tree::ptree an_outPk;
+			an_outPk.put("mask", "a3befe86882b1dac68c34d907168a41939603e4bcb0b61500e526d54c44000f0");
+			outPk.push_back(std::make_pair("", an_outPk));
+		}
+		rv.add_child("outPk", outPk);
+	}
+	root.add_child("rv", rv);
+	//
+	auto ret_string = serial_bridge::decodeRctSimple(args_string_from_root(root));
+	stringstream ret_stream;
+	ret_stream << ret_string;
+	boost::property_tree::ptree ret_tree;
+	boost::property_tree::read_json(ret_stream, ret_tree);
+	optional<string> err_string = ret_tree.get_optional<string>(ret_json_key__any__err_msg());
+	if (err_string != none) {
+		BOOST_REQUIRE_MESSAGE(false, *err_string);
+	}
+	string mask_string = ret_tree.get<string>(ret_json_key__decodeRct_mask());
+	BOOST_REQUIRE(mask_string.size() > 0);
+	cout << "bridged__decodeRctSimple_with_bulletproof2: mask_string: " << mask_string << endl;
+	BOOST_REQUIRE(mask_string == "b90780ff4f16d9ae3d3e3b84aebd5ebc0c7d37e5197fef9353a400409b743903");
+	string amount_string = ret_tree.get<string>(ret_json_key__decodeRct_amount());
+	BOOST_REQUIRE(amount_string.size() > 0);
+	cout << "bridged__decodeRctSimple_with_bulletproof2: amount_string: " << amount_string << endl;
+	BOOST_REQUIRE(amount_string == "2000000000");
+}
 //
 BOOST_AUTO_TEST_CASE(bridged__encrypt_payment_id)
 {
@@ -1349,6 +1474,7 @@ BOOST_AUTO_TEST_CASE(bridge__transfers__send_stagenet_coinbase)
 			root.put("sending_amount", "1000000000000");
 			root.put("fee_per_b", "166333");
 			root.put("fee_mask", "10000");
+			root.put("fork_version", "10");
 			root.put("priority", "1");
 			root.add_child("unspent_outs", unspent_outs);
 			if (fee_actually_needed_string != none) {
@@ -1434,6 +1560,7 @@ BOOST_AUTO_TEST_CASE(bridge__transfers__send_stagenet_coinbase)
 			root.put("sec_spendKey_string", "4acde2a96d5085423fcc8713c878448b35e45900f4e9cf2c0b643eb4268e140e");
 			root.put("fee_per_b", "166333");
 			root.put("fee_mask", "10000");
+			root.put("fork_version", "10");
 			root.put("unlock_time", "0");
 			root.put("priority", "1");
 			root.add_child("mix_outs", mix_outs);

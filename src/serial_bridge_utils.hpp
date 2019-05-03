@@ -53,7 +53,7 @@ namespace serial_bridge_utils
 	string string_from_nettype(network_type nettype);
 	//
 	struct RetVals_Transforms
-	{
+	{ // TODO: can these be generalized with generics?
 		static string str_from(uint64_t v)
 		{
 			std::ostringstream o;
@@ -66,7 +66,16 @@ namespace serial_bridge_utils
 			o << v;
 			return o.str();
 		}
+		static string str_from(bool v)
+		{
+			std::ostringstream o;
+			o << v;
+			return o.str();
+		}
 	};
+	optional<double> none_or_double_from(const boost::property_tree::ptree &json, const string &key);
+	optional<bool> none_or_bool_from(const boost::property_tree::ptree &json, const string &key);
+	//../
 	string ret_json_from_root(const boost::property_tree::ptree &root);
 	string error_ret_json_from_message(const string &err_msg);
 	string error_ret_json_from_code(int code, optional<string> err_msg);
